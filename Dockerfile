@@ -1,21 +1,34 @@
 ARG ELIXIR_VERSION=1.14.5
+ARG ELIXIR_BUILDER_IMAGE=hexpm/elixir:${ELIXIR_VERSION}-erlang-26.1.1-debian-bullseye-20230612-slim
 ARG SOURCE_COMMIT
 
-FROM elixir:${ELIXIR_VERSION} as builder
+FROM ${ELIXIR_BUILDER_IMAGE} AS builder
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+ENV MIX_HOME=/root/.mix HEX_HOME=/root/.hex
+ENV ERL_AFLAGS="+JMsingle true"
 
-RUN apt-get update -q && apt-get --no-install-recommends install -y apt-utils ca-certificates build-essential libtool autoconf curl git
-
-RUN DEBIAN_CODENAME=$(sed -n 's/VERSION=.*(\(.*\)).*/\1/p' /etc/os-release) && \
-    curl -q https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - && \
-    echo "deb http://deb.nodesource.com/node_12.x $DEBIAN_CODENAME main" | tee /etc/apt/sources.list.d/nodesource.list && \
+RUN apt-get update -q && \
+    apt-get --no-install-recommends install -y \
+      apt-utils \
+      ca-certificates \
+      build-essential \
+      libtool \
+      autoconf \
+      curl \
+      git \
+      gnupg && \
+    mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+      | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" \
+      > /etc/apt/sources.list.d/nodesource.list && \
     apt-get update -q && \
-    apt-get --no-install-recommends install -y nodejs
+    apt-get --no-install-recommends install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN mix local.hex --force && \
-    mix local.rebar --force && \
-    mix hex.info
+    mix local.rebar --force
 
 WORKDIR /src
 ADD ./ /src/

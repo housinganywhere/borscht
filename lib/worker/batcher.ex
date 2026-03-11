@@ -497,11 +497,19 @@ defmodule BorsNG.Worker.Batcher do
                 # If a user doesn't have a public email address in their GH profile
                 # then get the email from the first commit to the PR
                 user_email =
-                  if user.email != nil do
+                  if user != nil and user.email != nil do
                     user.email
                   else
                     Enum.at(commits, 0).author_email
                   end
+                
+                user_name =
+                  if user != nil and user.name != nil do
+                    user.name
+                  else
+                    Enum.at(commits, 0).author_name
+                  end
+                
 
                 # The head sha is the final commit in the PR.
                 source_sha = pr.head_sha
@@ -549,7 +557,7 @@ defmodule BorsNG.Worker.Batcher do
                           tree: merge_commit.tree,
                           parents: [prev_head],
                           commit_message: commit_message,
-                          committer: %{name: user.name || user.login, email: user_email}
+                          committer: %{name: user_name || "bors", email: user_email}
                         }
                       )
                   end
